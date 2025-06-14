@@ -14,7 +14,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog"
-import { Loader2, Terminal, BookOpenText } from "lucide-react"
+import { Loader2, Terminal, BookOpenText, AlertCircle, ChevronsUpDown } from "lucide-react"
 import ReactMarkdown from 'react-markdown'
 
 
@@ -24,6 +24,7 @@ interface PLModel {
   non_negativity: string[]
 }
 interface ApiResponse { model: PLModel; explanation: string }
+interface SimplexSolution { Z: number; variaveis: { [key: string]: number }; }
 
 export default function Home() {
   
@@ -33,6 +34,11 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [showExplanation, setShowExplanation] = useState(false)
   const [isResultModalOpen, setIsResultModalOpen] = useState(false)
+  const [simplexSolution, setSimplexSolution] = useState<SimplexSolution | null>(null)
+  const [simplexError, setSimplexError] = useState<string | null>(null)
+  const [isCalculatingSimplex, setIsCalculatingSimplex] = useState(false)
+  const [simplexStepsLog, setSimplexStepsLog] = useState<string | null>(null)
+  const [showSimplexSteps, setShowSimplexSteps] = useState(false)
 
   const handleSubmit = async () => {
     setIsLoading(true)
@@ -40,6 +46,10 @@ export default function Home() {
     setResult(null)
     setShowExplanation(false)
     setIsResultModalOpen(false)
+    setSimplexSolution(null)
+    setSimplexError(null)
+    setSimplexStepsLog(null)
+    setShowSimplexSteps(false)
 
     try {
       const response = await fetch('/api/solve-lp', {
@@ -75,8 +85,57 @@ export default function Home() {
     setIsResultModalOpen(open)
     if (!open) {
       setIsLoading(false) 
+      setSimplexSolution(null)
+      setSimplexError(null)
+      setSimplexStepsLog(null)
+      setShowSimplexSteps(false)
     }
   }
+
+  const canRunStandardSimplex = (model: PLModel | null): boolean => {
+    if (!model) return false;
+    const isMaximize = model.objective_function.type === "Maximize";
+    const allConstraintsLTE = model.constraints.every(c => c.includes("<="));
+    return isMaximize && allConstraintsLTE;
+  };
+
+  const handleRunSimplex = async () => { 
+      if (!result?.model) return;
+      setIsCalculatingSimplex(true);
+      setSimplexError(null);
+      setSimplexSolution(null);
+      setSimplexStepsLog(null);
+      setShowSimplexSteps(false);
+      
+      try {
+         const response = await fetch('/api/solve-simplex', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify(result.model), 
+         });
+
+         const data = await response.json(); 
+
+         if (!data || data.finalSolution === undefined || data.stepsLog === undefined) {
+             throw new Error("Resposta da API Simplex não contém os dados esperados.");
+         }
+         
+         setSimplexSolution(data.finalSolution);
+         setSimplexStepsLog(data.stepsLog);
+         if (data.error) {
+             setSimplexError(data.error);
+         }
+
+      } catch (err) {
+          // Captura erros de fetch, JSON parse, ou o erro lançado acima
+          console.error("Erro ao calcular/buscar solução Simplex:", err);
+          setSimplexError("Ocorreu um erro ao tentar calcular a solução Simplex."); // Mensagem mais genérica
+          setSimplexSolution(null); 
+          setSimplexStepsLog(null); 
+      } finally {
+          setIsCalculatingSimplex(false);
+      }
+  };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 bg-gradient-to-b from-white to-slate-100">
@@ -168,6 +227,66 @@ export default function Home() {
                         </ul>
                     </div>
                   </div>
+                  
+                  {canRunStandardSimplex(result.model) && (
+                      <div className="pt-4 border-t border-slate-200 mt-4 space-y-3">
+                          <h3 className="text-base font-semibold text-slate-700">Solução via Simplex Padrão:</h3>
+                          {!simplexSolution && !simplexError && (
+                            <Button
+                                onClick={handleRunSimplex}
+                                disabled={isCalculatingSimplex}
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                                {isCalculatingSimplex ? (
+                                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Calculando...</>
+                                ) : (
+                                    "Resolver com Simplex"
+                                )}
+                            </Button>
+                          )}
+
+                          {simplexSolution && (
+                              <div className="mt-3 text-sm space-y-1 bg-green-50 border border-green-200 p-3 rounded-md">
+                                  <p><span className="font-medium">Valor Ótimo (Z):</span> <code className="ml-1 font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-900">{simplexSolution.Z.toFixed(2)}</code></p>
+                                  <p className="font-medium">Valores das Variáveis:</p>
+                                  <ul className="list-disc list-outside pl-5">
+                                      {Object.entries(simplexSolution.variaveis).map(([variavel, valor]) => (
+                                          <li key={variavel}>
+                                              <code className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-900">{variavel} = {valor.toFixed(2)}</code>
+                                          </li>
+                                      ))}
+                                  </ul>
+                              </div>
+                          )}
+                          
+                           {simplexError && (
+                              <div className="mt-3 text-sm text-red-700 bg-red-50 border border-red-200 p-3 rounded-md flex items-start">
+                                 <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                                 <span>Erro no cálculo Simplex: {simplexError}</span>
+                              </div>
+                          )}
+                          
+                          {simplexStepsLog && (
+                               <div className="mt-3">
+                                   <Button
+                                       variant="outline"
+                                       size="sm"
+                                       onClick={() => setShowSimplexSteps(!showSimplexSteps)}
+                                       className="w-full justify-start text-left text-gray-600 hover:text-gray-800 hover:bg-gray-50 px-3"
+                                   >
+                                       <ChevronsUpDown className="mr-2 h-4 w-4 flex-shrink-0" />
+                                       <span className="flex-grow">{showSimplexSteps ? "Ocultar Detalhes do Cálculo" : "Mostrar Detalhes do Cálculo (Tabelas)"}</span>
+                                   </Button>
+                                   {showSimplexSteps && (
+                                       <pre className="mt-2 p-3 border bg-gray-50 rounded-md text-xs text-gray-700 whitespace-pre-wrap break-words max-h-80 overflow-y-auto font-mono shadow-inner">
+                                           {simplexStepsLog}
+                                       </pre>
+                                   )}
+                               </div>
+                           )}
+                      </div>
+                  )}
                   
                   <Button
                     variant={showExplanation ? "secondary" : "ghost"}

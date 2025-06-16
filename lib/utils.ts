@@ -15,8 +15,7 @@ A chave \"model\" deve conter um objeto JSON com as seguintes subchaves:
 - \"non_negativity\": Um array de strings representando as restrições de não negatividade (ex: \"x1 >= 0\", \"x2 >= 0\").
 
 
-A chave \"explanation\" deve conter uma string em formato markdown explicando passo a passo como você identificou cada componente do modelo (função objetivo, variáveis de decisão, restrições) a partir do texto original. Explique o significado das variáveis de decisão e como cada restrição foi derivada.
-
+A chave \"explanation\" deve conter uma string em formato markdown explicando passo a passo como você identificou cada componente do modelo (função objetivo, variáveis de decisão, restrições) a partir do texto original. Explique o significado das variáveis de decisão e como cada restrição foi derivada, mas sem extender muito.
 Texto do problema:\n`
 
 // renan eu fiz essa função a uxiliar (cn)  pra juntar as classes dinamicamente no tailwind

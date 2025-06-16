@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import SimplexPadrao from "@/lib/simplex.js";
 
 interface PLModel {
+  variables: string[]; // nomes das variáveis, ex: ["x1", "x2", "x3"]
   objective_function: { type: string; expression: string };
   constraints: string[];
   non_negativity: string[]; // faz parte do modelo
@@ -11,61 +12,61 @@ interface PLModel {
 const transformModelForSimplex = (
   model: PLModel
 ): { variables: number[][]; b: number[] } => {
-  console.log("[transformModel] Iniciando transformação para:", model);
+  const varNames = model.variables;
+  const numVars = varNames.length;
+  const numConstraints = model.constraints.length;
 
-  // coeficientes da função objetivo
-  const objMatch = model.objective_function.expression.match(
-    /([+-]?\d*\.?\d*)\s*([a-zA-Z]\d*)/g
-  );
-  console.log("[transformModel] Coeficientes da função objetivo:", objMatch);
+  const extractCoefficients = (expression: string): number[] => {
+    const coeffs = Array(numVars).fill(0);
+    const terms =
+      expression.match(/([+-]?\s*\d*\.?\d*)\s*([a-zA-Z]\d*)/g) || [];
 
-  if (!objMatch) {
-    throw new Error("Formato da função objetivo inválido");
-  }
-
-  const objCoeffs = objMatch.map((term) => {
-    const [coeff] = term.split(/[a-zA-Z]/);
-    return coeff ? parseFloat(coeff) : 1;
-  });
-  console.log("[transformModel] Coeficientes extraídos:", objCoeffs);
-
-  // coeficientes das restrições
-  const constraintCoeffs = model.constraints.map((constraint) => {
-    const terms = constraint.match(/([+-]?\d*\.?\d*)\s*([a-zA-Z]\d*)/g) || [];
-    console.log(
-      "[transformModel] Termos da restrição:",
-      constraint,
-      "->",
-      terms
-    );
-
-    const coeffs = terms.map((term) => {
-      const [coeff] = term.split(/[a-zA-Z]/);
-      return coeff ? parseFloat(coeff) : 1;
+    terms.forEach((term) => {
+      const match = term.match(/([+-]?\s*\d*\.?\d*)\s*([a-zA-Z]\d*)/);
+      if (match) {
+        let coef = match[1].replace(/\s/g, "");
+        coef = coef === "+" || coef === "" ? "1" : coef === "-" ? "-1" : coef;
+        const varIndex = varNames.indexOf(match[2]);
+        if (varIndex >= 0) {
+          coeffs[varIndex] = parseFloat(coef);
+        }
+      }
     });
-    console.log("[transformModel] Coeficientes da restrição:", coeffs);
+
     return coeffs;
+  };
+
+  // Linha da FO (negada para maximização) + folgas zeradas
+  const objCoeffs = extractCoefficients(model.objective_function.expression);
+  const rowFO =
+    model.objective_function.type.toLowerCase() === "maximize"
+      ? [...objCoeffs.map((c) => -c), ...Array(numConstraints).fill(0)]
+      : [...objCoeffs, ...Array(numConstraints).fill(0)];
+
+  // Restrições com folgas
+  const constraintRows = model.constraints.map((constraint, i) => {
+    const lhs = constraint.split(/<=|>=|=/)[0];
+    const coeffs = extractCoefficients(lhs);
+    const folgas = Array(numConstraints).fill(0);
+    folgas[i] = 1;
+    return [...coeffs, ...folgas];
   });
 
-  //valores do lado direito (b)
-  const bValues = model.constraints.map((constraint) => {
-    const match = constraint.match(/[<>=]\s*(\d+)/);
-    console.log(
-      "[transformModel] Valor b da restrição:",
-      constraint,
-      "->",
-      match ? match[1] : "não encontrado"
-    );
-    return match ? parseFloat(match[1]) : 0;
-  });
+  const variables = [rowFO, ...constraintRows];
 
-  //matriz de variaveis
-  const variables = [objCoeffs, ...constraintCoeffs];
-  console.log("[transformModel] Matriz final de variáveis:", variables);
-  console.log("[transformModel] Valores b:", bValues);
+  // Lado direito (b)
+  const b = [
+    0,
+    ...model.constraints.map((c) => {
+      const match = c.match(/[<>=]\s*(-?\d+(\.\d+)?)/);
+      return match ? parseFloat(match[1]) : 0;
+    }),
+  ];
 
-  return { variables, b: bValues };
+  return { variables, b };
 };
+
+
 
 export async function POST(request: NextRequest) {
   let originalConsoleLog: (...args: any[]) => void = console.log;
@@ -119,6 +120,7 @@ export async function POST(request: NextRequest) {
         finalSolution
       );
     } catch (err) {
+      console.error(err)
       simplexError =
         err instanceof Error
           ? err.message

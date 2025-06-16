@@ -22,7 +22,7 @@ interface PLModel {
   objective_function: { type: string; expression: string }
   constraints: string[]
   non_negativity: string[]
-  // variables: string[]
+  variables: string[]
 }
 interface ApiResponse { model: PLModel; explanation: string }
 interface SimplexSolution { Z: number; variaveis: { [key: string]: number }; }
@@ -207,7 +207,7 @@ export default function Home() {
                            <code className="ml-1 font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-900">{result.model.objective_function.expression}</code>
                         </p>
                     </div>
-                    {/* <div className="pl-4 pt-1">
+                    <div className="pl-4 pt-1">
                         <p className="text-sm font-medium text-slate-800 mb-1">Variáveis:</p>
                         <ul className="list-disc list-outside pl-5 space-y-1">
                         {result.model.variables.map((variable, index) => (
@@ -216,7 +216,7 @@ export default function Home() {
                             </li>
                         ))}
                         </ul>
-                    </div> */}
+                    </div>
                     <div className="pl-4 pt-1">
                         <p className="text-sm font-medium text-slate-800 mb-1">Restrições:</p>
                         <ul className="list-disc list-outside pl-5 space-y-1">

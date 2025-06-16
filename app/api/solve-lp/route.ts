@@ -1,9 +1,10 @@
+import { GEMINI_PROMPT_LP } from "@/lib/utils";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
 const API_KEY = process.env.GOOGLE_API_KEY;
 const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-1.5-flash";
-const BASE_PROMPT = process.env.GEMINI_PROMPT || "";
+const BASE_PROMPT = GEMINI_PROMPT_LP;
 
 if (!API_KEY) {
   console.error("!!!Chave da API Gemini (GOOGLE_API_KEY) não encontrada no .env.local !!!");

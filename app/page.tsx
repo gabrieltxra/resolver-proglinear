@@ -287,7 +287,7 @@ export default function Home() {
                                        className="w-full justify-start text-left text-gray-600 hover:text-gray-800 hover:bg-gray-50 px-3"
                                    >
                                        <ChevronsUpDown className="mr-2 h-4 w-4 flex-shrink-0" />
-                                       <span className="flex-grow">{showSimplexSteps ? "Ocultar Detalhes do Cálculo" : "Mostrar Detalhes do Cálculo (Tabelas)"}</span>
+                                       <span className="flex-grow">{showSimplexSteps ? "Ocultar Detalhes do Cálculo" : "Mostrar Detalhes do Cálculo (Desenvolvedores)"}</span>
                                    </Button>
                                    {showSimplexSteps && (
                                        <pre className="mt-2 p-3 border bg-gray-50 rounded-md text-xs text-gray-700 whitespace-pre-wrap break-words max-h-80 overflow-y-auto font-mono shadow-inner">

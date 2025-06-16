@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Loader2, Terminal, BookOpenText, AlertCircle, ChevronsUpDown } from "lucide-react"
 import ReactMarkdown from 'react-markdown'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 
 interface PLModel {
@@ -138,6 +139,130 @@ export default function Home() {
       }
   };
 
+  const canRunGraphicalMethod = (model: PLModel | null): boolean => {
+    if (!model) return false;
+    return model.variables.length === 2;
+  };
+
+  const generateGraphPoints = (model: PLModel): { x: number; y: number; name: string }[] => {
+    if (!model || model.variables.length !== 2) return [];
+    
+    const points: { x: number; y: number; name: string }[] = [];
+    const xVar = model.variables[0];
+    const yVar = model.variables[1];
+    
+    let maxX = 0;
+    let maxY = 0;
+    
+    model.constraints.forEach(constraint => {
+      const terms = constraint.match(/([+-]?\d*\.?\d*)\s*([a-zA-Z]\d*)/g) || [];
+      const coeffs = terms.map(term => {
+        const [coeff] = term.split(/[a-zA-Z]/);
+        return coeff ? parseFloat(coeff) : 1;
+      });
+      
+      const bMatch = constraint.match(/[<>=]\s*(\d+)/);
+      const b = bMatch ? parseFloat(bMatch[1]) : 0;
+      
+      if (coeffs[0] !== 0) {
+        maxX = Math.max(maxX, Math.abs(b / coeffs[0]));
+      }
+      if (coeffs[1] !== 0) {
+        maxY = Math.max(maxY, Math.abs(b / coeffs[1]));
+      }
+    });
+    
+    maxX = maxX * 1.2;
+    maxY = maxY * 1.2;
+    
+    
+    model.constraints.forEach((constraint, index) => {
+      const terms = constraint.match(/([+-]?\d*\.?\d*)\s*([a-zA-Z]\d*)/g) || [];
+      const coeffs = terms.map(term => {
+        const [coeff] = term.split(/[a-zA-Z]/);
+        return coeff ? parseFloat(coeff) : 1;
+      });
+      
+      const bMatch = constraint.match(/[<>=]\s*(\d+)/);
+      const b = bMatch ? parseFloat(bMatch[1]) : 0;
+      
+      
+      const numPoints = 100;
+      for (let i = 0; i <= numPoints; i++) {
+        const x = (maxX * i) / numPoints;
+        if (coeffs[1] !== 0) {
+          const y = (b - coeffs[0] * x) / coeffs[1];
+          if (y >= 0 && y <= maxY) {
+            points.push({
+              x: Number(x.toFixed(2)),
+              y: Number(y.toFixed(2)),
+              name: `Restrição ${index + 1}`
+            });
+          }
+        }
+      }
+    });
+
+    
+    model.constraints.forEach((constraint, index) => {
+      const terms = constraint.match(/([+-]?\d*\.?\d*)\s*([a-zA-Z]\d*)/g) || [];
+      const coeffs = terms.map(term => {
+        const [coeff] = term.split(/[a-zA-Z]/);
+        return coeff ? parseFloat(coeff) : 1;
+      });
+      
+      const bMatch = constraint.match(/[<>=]\s*(\d+)/);
+      const b = bMatch ? parseFloat(bMatch[1]) : 0;
+      
+      if (coeffs[0] !== 0) {
+        const x = b / coeffs[0];
+        if (x >= 0 && x <= maxX) {
+          points.push({
+            x: Number(x.toFixed(2)),
+            y: 0,
+            name: `Interseção ${index + 1} com ${xVar}`
+          });
+        }
+      }
+      if (coeffs[1] !== 0) {
+        const y = b / coeffs[1];
+        if (y >= 0 && y <= maxY) {
+          points.push({
+            x: 0,
+            y: Number(y.toFixed(2)),
+            name: `Interseção ${index + 1} com ${yVar}`
+          });
+        }
+      }
+    });
+
+    
+    const objTerms = model.objective_function.expression.match(/([+-]?\d*\.?\d*)\s*([a-zA-Z]\d*)/g) || [];
+    const objCoeffs = objTerms.map(term => {
+      const [coeff] = term.split(/[a-zA-Z]/);
+      return coeff ? parseFloat(coeff) : 1;
+    });
+
+    if (objCoeffs.length >= 2) {
+      const numPoints = 100;
+      for (let i = 0; i <= numPoints; i++) {
+        const x = (maxX * i) / numPoints;
+        if (objCoeffs[1] !== 0) {
+          const y = (objCoeffs[0] * x) / objCoeffs[1];
+          if (y >= 0 && y <= maxY) {
+            points.push({
+              x: Number(x.toFixed(2)),
+              y: Number(y.toFixed(2)),
+              name: 'Função Objetivo'
+            });
+          }
+        }
+      }
+    }
+    
+    return points;
+  };
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 bg-gradient-to-b from-white to-slate-100">
       <div className="w-full max-w-2xl mx-auto space-y-6">
@@ -239,6 +364,52 @@ export default function Home() {
                     </div>
                   </div>
                   
+                  {canRunGraphicalMethod(result.model) && (
+                    <div className="pt-4 border-t border-slate-200 mt-4 space-y-3">
+                      <h3 className="text-base font-semibold text-slate-700">Visualização Gráfica:</h3>
+                      <div className="w-full h-[400px] bg-white rounded-lg border border-slate-200 p-4">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart
+                            data={generateGraphPoints(result.model)}
+                            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis 
+                              dataKey="x" 
+                              label={{ value: result.model.variables[0], position: 'insideBottomRight', offset: -5 }} 
+                            />
+                            <YAxis 
+                              dataKey="y" 
+                              label={{ value: result.model.variables[1], angle: -90, position: 'insideLeft' }} 
+                            />
+                            <Tooltip />
+                            <Legend />
+                            {result.model.constraints.map((_, index) => (
+                              <Line
+                                key={`line-${index}`}
+                                type="monotone"
+                                dataKey="y"
+                                data={generateGraphPoints(result.model).filter(p => p.name === `Restrição ${index + 1}`)}
+                                stroke={`hsl(${(index * 360) / result.model.constraints.length}, 70%, 50%)`}
+                                dot={false}
+                                name={`Restrição ${index + 1}`}
+                              />
+                            ))}
+                            <Line
+                              type="monotone"
+                              dataKey="y"
+                              data={generateGraphPoints(result.model).filter(p => p.name === 'Função Objetivo')}
+                              stroke="#000000"
+                              strokeDasharray="5 5"
+                              dot={false}
+                              name="Função Objetivo"
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  )}
+                  
                   {canRunStandardSimplex(result.model) && (
                       <div className="pt-4 border-t border-slate-200 mt-4 space-y-3">
                           <h3 className="text-base font-semibold text-slate-700">Solução via Simplex Padrão:</h3>
@@ -287,7 +458,7 @@ export default function Home() {
                                        className="w-full justify-start text-left text-gray-600 hover:text-gray-800 hover:bg-gray-50 px-3"
                                    >
                                        <ChevronsUpDown className="mr-2 h-4 w-4 flex-shrink-0" />
-                                       <span className="flex-grow">{showSimplexSteps ? "Ocultar Detalhes do Cálculo" : "Mostrar Detalhes do Cálculo (Desenvolvedores)"}</span>
+                                       <span className="flex-grow">{showSimplexSteps ? "Ocultar Detalhes do Cálculo" : "Mostrar Detalhes do Cálculo (Tabelas)"}</span>
                                    </Button>
                                    {showSimplexSteps && (
                                        <pre className="mt-2 p-3 border bg-gray-50 rounded-md text-xs text-gray-700 whitespace-pre-wrap break-words max-h-80 overflow-y-auto font-mono shadow-inner">

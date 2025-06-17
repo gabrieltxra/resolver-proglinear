@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   Dialog,
@@ -17,6 +17,7 @@ import {
 import { Loader2, Terminal, BookOpenText, AlertCircle, ChevronsUpDown } from "lucide-react"
 import ReactMarkdown from 'react-markdown'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { useRouter } from "next/navigation"
 
 
 interface PLModel {
@@ -41,6 +42,8 @@ export default function Home() {
   const [isCalculatingSimplex, setIsCalculatingSimplex] = useState(false)
   const [simplexStepsLog, setSimplexStepsLog] = useState<string | null>(null)
   const [showSimplexSteps, setShowSimplexSteps] = useState(false)
+
+  const router = useRouter()
 
   const handleSubmit = async () => {
     setIsLoading(true)
@@ -266,7 +269,7 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 bg-gradient-to-b from-white to-slate-100">
       <div className="w-full max-w-2xl mx-auto space-y-6">
-        <Card className="shadow-xl border border-slate-200 overflow-hidden">
+        <Card className="shadow-xl border border-slate-200 overflow-hidden min-h-[540px] pb-4">
            <div className="bg-green-600 h-2 w-full" />
           <CardHeader className="pt-8 pb-6 px-8">
             <CardTitle className="text-center text-2xl md:text-3xl font-bold text-slate-800">
@@ -301,6 +304,16 @@ export default function Home() {
             </Button>
           </CardFooter>
         </Card>
+
+        <div className="flex justify-center">
+          <Button
+            onClick={() => router.push('/transporte')}
+            className="mt-2 bg-green-600 hover:bg-green-700 text-white px-8 py-3 text-lg font-semibold rounded-md shadow-md transition-all"
+            size="lg"
+          >
+            É um problema de Método de Transporte?
+          </Button>
+        </div>
 
         {error && (
           <Alert variant="destructive" className="shadow-md">

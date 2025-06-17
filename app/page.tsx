@@ -14,7 +14,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog"
-import { Loader2, Terminal, BookOpenText, AlertCircle, ChevronsUpDown } from "lucide-react"
+import { Loader2, Terminal, BookOpenText, AlertCircle, ChevronsUpDown, Truck } from "lucide-react"
 import ReactMarkdown from 'react-markdown'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
@@ -291,14 +291,23 @@ export default function Home() {
              </div>
           </CardContent>
           <CardFooter className="flex justify-center pt-4 pb-8 px-8">
-            <Button
-              onClick={handleSubmit}
-              disabled={isLoading || !exercise.trim()}
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-2 h-auto text-base font-medium rounded-md transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isLoading && <Loader2 className="h-4 w-4 animate-spin" />} 
-              {isLoading ? "Analisando..." : "Enviar"}
-            </Button>
+            <div className="flex flex-col gap-4 items-center">
+              <Button
+                onClick={handleSubmit}
+                disabled={isLoading || !exercise.trim()}
+                className="bg-green-600 hover:bg-green-700 text-white px-8 py-2 h-auto text-base font-medium rounded-md transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isLoading && <Loader2 className="h-4 w-4 animate-spin" />} 
+                {isLoading ? "Analisando..." : "Enviar"}
+              </Button>
+              <Button
+                onClick={() => window.location.href = '/transporte'}
+                className="bg-green-600 hover:bg-green-700 text-white px-8 py-2 h-auto text-base font-medium rounded-md transition-all hover:shadow-md flex items-center gap-2"
+              >
+                <Truck className="h-4 w-4" />
+                É um Método de Transporte?
+              </Button>
+            </div>
           </CardFooter>
         </Card>
 

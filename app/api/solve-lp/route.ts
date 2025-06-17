@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 import { GEMINI_PROMPT_LP } from "@/lib/utils";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
